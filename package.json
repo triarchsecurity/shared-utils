@@ -1,0 +1,85 @@
+{
+  "name": "@triarchsecurity/triarch-shared",
+  "version": "0.3.0",
+  "description": "Shared Drizzle schema + helpers consumed by triarch-dev admin and triarch-portal apps",
+  "private": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "package.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
+    },
+    "./auth": {
+      "types": "./dist/auth-context.d.ts",
+      "default": "./dist/auth-context.js"
+    },
+    "./sanitize-commit": {
+      "types": "./dist/sanitize-commit.d.ts",
+      "default": "./dist/sanitize-commit.js"
+    },
+    "./slack": {
+      "types": "./dist/slack-status.d.ts",
+      "default": "./dist/slack-status.js"
+    },
+    "./db": {
+      "types": "./dist/db.d.ts",
+      "default": "./dist/db.js"
+    },
+    "./release-entry-summary": {
+      "types": "./dist/release-entry-summary.d.ts",
+      "default": "./dist/release-entry-summary.js"
+    },
+    "./release-history": {
+      "types": "./dist/release-history.d.ts",
+      "default": "./dist/release-history.js"
+    },
+    "./pipeline-summary": {
+      "types": "./dist/pipeline-summary.d.ts",
+      "default": "./dist/pipeline-summary.js"
+    },
+    "./group-sections": {
+      "types": "./dist/group-sections.d.ts",
+      "default": "./dist/group-sections.js"
+    },
+    "./internal-hmac": {
+      "types": "./dist/internal-hmac.d.ts",
+      "default": "./dist/internal-hmac.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.20.0",
+    "typescript": "^5"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/triarchsecurity/triarch-shared.git"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
