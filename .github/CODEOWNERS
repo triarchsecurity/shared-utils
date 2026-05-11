@@ -1,0 +1,24 @@
+# CODEOWNERS — required reviewers for sensitive paths.
+# The branch ruleset enforces "require code owner review" on main.
+
+# default — engineering reviews everything
+*                                @MyAlterLego
+
+# CI/CD pipeline itself — security team must review
+/.github/                        @MyAlterLego
+/.github/workflows/              @MyAlterLego
+/.github/rulesets/               @MyAlterLego
+/iac/                            @MyAlterLego
+/bootstrap.sh                    @MyAlterLego
+
+# Threat model — drift requires re-review
+/.threatmodel/                   @MyAlterLego
+
+# Auth code paths — extra scrutiny
+/src/auth/                       @MyAlterLego
+/src/middleware/auth*            @MyAlterLego
+/src/lib/crypto*                 @MyAlterLego
+
+# Anything that touches secrets handling
+**/secrets*                      @MyAlterLego
+**/vault*                        @MyAlterLego

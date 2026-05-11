@@ -1,0 +1,12 @@
+# Semgrep ignore patterns
+node_modules/
+dist/
+build/
+coverage/
+.next/
+.cache/
+*.min.js
+*.bundle.js
+**/__snapshots__/**
+.threatmodel/state/
+docs/

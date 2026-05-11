@@ -1,0 +1,32 @@
+## Project-specific Gitleaks config.
+## Inherits the upstream defaults; only ADDS allowlists and custom rules.
+
+title = "shared-utils gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "workos-api-key"
+description = "WorkOS API key"
+regex = '''sk_(live|test)_[A-Za-z0-9]{32,}'''
+tags = ["key", "WorkOS"]
+
+[[rules]]
+id = "auth0-mgmt-token"
+description = "Auth0 Management API token"
+regex = '''eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6[A-Za-z0-9_-]{20,}'''
+tags = ["token", "Auth0"]
+
+[allowlist]
+description = "Project allowlist"
+paths = [
+  '''(.*\.lock)$''',
+  '''(.*\.snap)$''',
+  '''^docs/''',
+  '''^\.threatmodel/''',
+]
+regexes = [
+  # mock JWTs in test fixtures
+  '''eyJ[A-Za-z0-9_-]{10,}\.eyJtb2NrIjp0cnVlfQ\.[A-Za-z0-9_-]+''',
+]

@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+  # Pin GitHub Actions by SHA — Dependabot understands the trailing version
+  # comment and bumps both together.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+    reviewers:
+      - "MyAlterLego"
+
+  # npm — app dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "npm"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      production-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+  # Docker base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # Terraform / OpenTofu
+  - package-ecosystem: "terraform"
+    directory: "/iac/github-oidc-aws"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "iac"
