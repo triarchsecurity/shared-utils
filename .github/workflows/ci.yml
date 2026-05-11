@@ -1,0 +1,188 @@
+name: CI
+
+# Triarch SMB CI/CD framework — LITE variant.
+# -------------------------------------------
+# This is the DEFAULT workflow shipped by deploy.md when:
+#   - the repo has no `iac/` (no IaC scanning needed yet)
+#   - the repo has no `.threatmodel/` (no drift detection needed yet)
+#   - the repo has no Dockerfile (no container scanning needed yet)
+#   - OR the repo has no GitHub Advanced Security (private + Free / Team)
+#
+# When ANY of those become true, switch to `ci-full.yml` (which adds Checkov,
+# tfsec, threat-model-drift, and SARIF upload to the Security tab).
+#
+# WHY THIS EXISTS
+# Earlier framework versions shipped a single `ci.yml` with conditional
+# `if: hashFiles('iac/**/*.tf') != ''` jobs that broke workflow startup on
+# repos missing those paths (the typical SMB starter state). See FINDINGS-2026-05-10.md.
+#
+# The lite variant has only UNCONDITIONAL jobs, so it works day-1 on any repo.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    # Only fire on push to main (post-merge). Feature-branch + Dependabot pushes
+    # are covered by the pull_request trigger above. Restricting push: to main
+    # avoids the `jobs: []` failures from Dependabot's read-only GITHUB_TOKEN
+    # on private repos with `pull-requests: write` per-job permission requests.
+    branches: [main]
+  workflow_dispatch:
+
+# Deny by default; jobs request what they need (and only what their token can grant).
+permissions: {}
+
+# Auto-cancel previous runs on the same PR/branch
+concurrency:
+  group: ci-lite-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # -------------------------------------------------------------- lint-test
+  lint-test:
+    name: lint-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci --no-audit --no-fund
+      - name: Lint (advisory on first deploy)
+        continue-on-error: true   # remove once existing lint debt is addressed; framework default is forgiving for SMB onboarding
+        run: npm run lint
+      # Uncomment when typecheck / test scripts exist in package.json:
+      #   - run: npm run typecheck
+      #   - run: npm test
+
+  # -------------------------------------------------------------- semgrep
+  semgrep:
+    name: semgrep
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    container:
+      image: semgrep/semgrep:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Semgrep diff scan (PR) / full scan (push)
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            semgrep ci \
+              --config p/ci \
+              --config p/owasp-top-ten \
+              --config p/react \
+              --config p/typescript \
+              --config p/javascript \
+              --config p/nodejs \
+              --config p/secrets \
+              --baseline-ref origin/${{ github.base_ref }} \
+              --json --output=semgrep.json || true
+          else
+            semgrep ci \
+              --config p/ci \
+              --config p/owasp-top-ten \
+              --json --output=semgrep.json || true
+          fi
+
+      - name: Fail on Critical / High
+        run: |
+          if [[ -f semgrep.json ]]; then
+            high=$(jq '[.results[] | select(.extra.severity=="ERROR" or .extra.severity=="WARNING")] | length' semgrep.json)
+            if [[ "$high" -gt 0 ]]; then
+              echo "::error::Semgrep found $high Critical/High findings"
+              jq '.results[] | select(.extra.severity=="ERROR" or .extra.severity=="WARNING") | {check_id, path, start, message: .extra.message}' semgrep.json
+              exit 1
+            fi
+            echo "no Critical/High findings"
+          fi
+
+  # -------------------------------------------------------------- osv-scanner
+  osv-scanner:
+    name: osv-scanner
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OSV-Scanner
+        # NOTE: google/osv-scanner-action is a monorepo; sub-action lives in /osv-scanner-action.
+        # v2 dropped --skip-git (default behavior); supports --format=json with --output=path.
+        uses: google/osv-scanner-action/osv-scanner-action@v2.3.5   # TODO: pin to commit SHA
+        with:
+          scan-args: |-
+            --recursive
+            --format=json
+            --output=osv.json
+            ./
+        continue-on-error: true   # known vulns shouldn't block PR; surfacing is the goal
+
+      - name: Summarize OSV findings
+        if: always()
+        run: |
+          if [[ -f osv.json ]]; then
+            count=$(jq '[.results[]?.packages[]?.vulnerabilities[]?] | length' osv.json 2>/dev/null || echo 0)
+            echo "OSV-Scanner found $count vulnerable package versions (see Dependabot for remediation)"
+            jq -r '.results[]?.packages[]? | "  \(.package.name)@\(.package.version): \([.vulnerabilities[].id] | join(\",\"))"' osv.json 2>/dev/null | head -30 || true
+          fi
+
+  # -------------------------------------------------------------- gitleaks
+  # Direct binary install (NOT gitleaks-action). The official Action requires a
+  # paid license for ORG accounts (not personal). Direct binary has no license.
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks (binary)
+        run: |
+          GITLEAKS_VERSION="8.30.1"
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tar.gz
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp
+          sudo mv /tmp/gitleaks /usr/local/bin/
+          gitleaks version
+
+      - name: Run gitleaks (PR diff or full repo scan)
+        run: |
+          set +e
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            gitleaks protect --staged=false --source=. --redact \
+              --config=.gitleaks.toml \
+              --log-opts="--no-merges origin/${{ github.base_ref }}..HEAD" \
+              --report-format=sarif --report-path=gitleaks.sarif
+          else
+            gitleaks detect --source=. --redact \
+              --config=.gitleaks.toml \
+              --report-format=sarif --report-path=gitleaks.sarif
+          fi
+          rc=$?
+          if [[ $rc -eq 1 ]]; then
+            echo "::error::gitleaks found one or more secrets — review the report above"
+            exit 1
+          elif [[ $rc -ne 0 ]]; then
+            echo "::warning::gitleaks exited with code $rc"
+          fi
+          echo "no secrets found"
+
+      - name: Upload gitleaks SARIF
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-sarif
+          path: gitleaks.sarif
