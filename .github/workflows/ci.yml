@@ -76,8 +76,11 @@ jobs:
           fetch-depth: 0
 
       - name: Semgrep diff scan (PR) / full scan (push)
+        env:
+          GH_EVENT_NAME: ${{ github.event_name }}
+          GH_BASE_REF: ${{ github.base_ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "$GH_EVENT_NAME" == "pull_request" ]]; then
             semgrep ci \
               --config p/ci \
               --config p/owasp-top-ten \
@@ -86,7 +89,7 @@ jobs:
               --config p/javascript \
               --config p/nodejs \
               --config p/secrets \
-              --baseline-ref origin/${{ github.base_ref }} \
+              --baseline-ref "origin/$GH_BASE_REF" \
               --json --output=semgrep.json || true
           else
             semgrep ci \
@@ -159,12 +162,15 @@ jobs:
           gitleaks version
 
       - name: Run gitleaks (PR diff or full repo scan)
+        env:
+          GH_EVENT_NAME: ${{ github.event_name }}
+          GH_BASE_REF: ${{ github.base_ref }}
         run: |
           set +e
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "$GH_EVENT_NAME" == "pull_request" ]]; then
             gitleaks protect --staged=false --source=. --redact \
               --config=.gitleaks.toml \
-              --log-opts="--no-merges origin/${{ github.base_ref }}..HEAD" \
+              --log-opts="--no-merges origin/$GH_BASE_REF..HEAD" \
               --report-format=sarif --report-path=gitleaks.sarif
           else
             gitleaks detect --source=. --redact \
