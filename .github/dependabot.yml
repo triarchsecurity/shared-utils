@@ -13,12 +13,16 @@ updates:
       - "github-actions"
     reviewers:
       - "MyAlterLego"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # npm — app dependencies
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
