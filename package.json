@@ -64,13 +64,13 @@
   },
   "peerDependencies": {
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.20.0"
+    "pg": "^8.21.0"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.20.0",
-    "typescript": "^5"
+    "pg": "^8.21.0",
+    "typescript": "^6"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
