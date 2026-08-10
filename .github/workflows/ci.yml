@@ -48,8 +48,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -71,7 +71,7 @@ jobs:
     container:
       image: semgrep/semgrep:latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -117,12 +117,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Run OSV-Scanner
         # NOTE: google/osv-scanner-action is a monorepo; sub-action lives in /osv-scanner-action.
         # v2 dropped --skip-git (default behavior); supports --format=json with --output=path.
-        uses: google/osv-scanner-action/osv-scanner-action@v2.3.8   # TODO: pin to commit SHA
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.0   # TODO: pin to commit SHA
         with:
           scan-args: |-
             --recursive
@@ -149,7 +149,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
